@@ -1,17 +1,95 @@
-target/
-pom.xml.tag
-pom.xml.releaseBackup
-pom.xml.versionsBackup
-pom.xml.next
-release.properties
-dependency-reduced-pom.xml
-buildNumber.properties
-.mvn/timing.properties
-# https://maven.apache.org/tools/wrapper/#Usage_with_or_without_Binary_JAR
-.mvn/wrapper/maven-wrapper.jar
+# ===============================================================
+# Apache NetBeans IDE Specific Files
+# ===============================================================
+# Local user settings, open tabs, window states, and personal breakpoints
+nbproject/private/
 
-# Eclipse m2e generated files
-# Eclipse Core
+# NetBeans generated test execution and profiling cache
+nbproject/build/
+nbproject/dist/
+.nb-gradle/
+
+
+# ===============================================================
+# Build Artifacts & Compiled Bytecode
+# ===============================================================
+# Standard Ant/Maven output directories
+build/
+dist/
+target/
+out/
+bin/
+
+# Java class files, bytecode archives, and packaging
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+*.zip
+*.tar.gz
+*.rar
+
+
+# ===============================================================
+# Database & Local Environment Configuration
+# ===============================================================
+# Ignore local DB credentials and endpoint overrides to prevent 
+# overwriting team members' local connection strings or leaking passwords.
+# Provide a 'db.properties.example' in repository as a tracked template.
+src/resources/db.properties
+
+
+# ===============================================================
+# Log Files, Runtime Dumps, & Reports
+# ===============================================================
+*.log
+*.log.*
+*.tmp
+*.bak
+*.swp
+*.pid
+hs_err_pid*
+replay_pid*
+
+
+# ===============================================================
+# Operating System & File System Artifacts
+# ===============================================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.directory
+.Trash-*
+
+
+# ===============================================================
+# Alternative IDE / Editor Cache (For team members using other tools)
+# ===============================================================
+# Eclipse
 .project
-# JDT-specific (Eclipse Java Development Tools)
 .classpath
+.settings/
+
+# IntelliJ IDEA / Fleet
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Visual Studio Code
+.vscode/
