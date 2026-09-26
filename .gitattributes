@@ -1,0 +1,5 @@
+# Auto-normalize all text files to LF in Git storage
+* text=auto eol=lf
+*.java text diff=java
+*.sql text
+*.properties text
