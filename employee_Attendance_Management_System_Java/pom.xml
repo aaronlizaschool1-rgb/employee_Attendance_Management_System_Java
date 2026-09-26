@@ -5,9 +5,19 @@
     <artifactId>employee_Attendance_Management_System_Java</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
+    
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>21</maven.compiler.release>
         <exec.mainClass>com.attendance.employee_attendance_management_system_java.Employee_Attendance_Management_System_Java</exec.mainClass>
     </properties>
+
+    <dependencies>
+        <!-- MySQL JDBC Connector Driver -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <version>8.3.0</version>
+        </dependency>
+    </dependencies>
 </project>
