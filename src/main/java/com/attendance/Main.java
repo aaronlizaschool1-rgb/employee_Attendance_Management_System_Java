@@ -8,6 +8,8 @@ package com.attendance;
  *
  * @author Aaron
  */
+
+// Main Entry Point for the Project
 public class Main {
 
     public static void main(String[] args) {
