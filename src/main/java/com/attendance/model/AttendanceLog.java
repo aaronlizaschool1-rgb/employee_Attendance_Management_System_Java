@@ -19,7 +19,6 @@ public class AttendanceLog {
         this.status = status;
     }
 
-    // Getters and Setters
     public int getLogId() { return logId; }
     public void setLogId(int logId) { this.logId = logId; }
 
