@@ -8,7 +8,7 @@ public class LeaveRecord {
     private String leaveType;
     private String status; 
     private String reason;
-    private int reviewedBy; 
+    private Integer reviewedBy; // int to integer to hold null values - naka NULL leaverecord.reviewedby
 
     public LeaveRecord() {}
 
@@ -23,7 +23,19 @@ public class LeaveRecord {
         this.reason = reason;
         this.reviewedBy = reviewedBy;
     }
-
+    
+    // Constructor for filing a NEW leave request
+    public LeaveRecord(int employeeId, String startDate, String endDate, 
+                       String leaveType, String reason) {
+        this.employeeId = employeeId;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.leaveType = leaveType;
+        this.status = "PENDING";
+        this.reason = reason;
+        this.reviewedBy = null;
+    }
+    
     public int getLeaveId() { return leaveId; }
     public void setLeaveId(int leaveId) { this.leaveId = leaveId; }
 

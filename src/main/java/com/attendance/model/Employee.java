@@ -13,9 +13,23 @@ public class Employee {
 
     public Employee() {}
 
+       // READ CONSTRUCTOR
     public Employee(int employeeId, String firstName, String lastName, String email, 
                     int departmentId, String jobTitle, String shiftStart, String shiftEnd, String status) {
         this.employeeId = employeeId;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.email = email;
+        this.departmentId = departmentId;
+        this.jobTitle = jobTitle;
+        this.shiftStart = shiftStart;
+        this.shiftEnd = shiftEnd;
+        this.status = status;
+    }
+    
+    // INSERT - APACHE DERBY HAS AUTO INCREMENT 1 START 1
+    public Employee(String firstName, String lastName, String email, 
+                    int departmentId, String jobTitle, String shiftStart, String shiftEnd, String status) {
         this.firstName = firstName;
         this.lastName = lastName;
         this.email = email;
@@ -52,4 +66,10 @@ public class Employee {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    
+    // REPLACES MEMORY ADDRESS WITH STRING; USEFUL AS OBJECT FOR SWING COMPONENTS
+    @Override
+    public String toString() {
+        return firstName + " " + lastName + " (" + jobTitle + ")";
+    }
 }

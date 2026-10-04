@@ -9,9 +9,18 @@ public class User {
     private String status;
 
     public User() {}
-
+    // Constructor for read Only
     public User(int userId, String username, String password, String fullName, String role, String status) {
         this.userId = userId;
+        this.username = username;
+        this.password = password;
+        this.fullName = fullName;
+        this.role = role;
+        this.status = status;
+    }
+    
+    // Constructor for inserting new user - auto increment
+    public User(String username, String password, String fullName, String role, String status) {
         this.username = username;
         this.password = password;
         this.fullName = fullName;
@@ -36,4 +45,9 @@ public class User {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    
+    @Override
+    public String toString() {
+        return fullName + " (" + role + ")";
+    }
 }
