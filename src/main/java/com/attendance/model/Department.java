@@ -11,7 +11,6 @@ public class Department {
         this.departmentName = departmentName;
     }
 
-    // Getters and Setters
     public int getDepartmentId() { return departmentId; }
     public void setDepartmentId(int departmentId) { this.departmentId = departmentId; }
 
