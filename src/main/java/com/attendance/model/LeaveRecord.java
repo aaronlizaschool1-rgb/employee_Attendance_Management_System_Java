@@ -57,6 +57,6 @@ public class LeaveRecord {
     public String getReason() { return reason; }
     public void setReason(String reason) { this.reason = reason; }
 
-    public int getReviewedBy() { return reviewedBy; }
-    public void setReviewedBy(int reviewedBy) { this.reviewedBy = reviewedBy; }
+    public Integer getReviewedBy() { return reviewedBy; }
+    public void setReviewedBy(Integer reviewedBy) { this.reviewedBy = reviewedBy; }
 }
