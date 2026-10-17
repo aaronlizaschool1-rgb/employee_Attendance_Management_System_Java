@@ -48,7 +48,7 @@ public class LoginFrame extends JFrame {
         school.setFont(school.getFont().deriveFont(11f));
 
         JPanel header = new JPanel(new GridLayout(0, 1, 0, 4));
-        JLabel logo = AppTheme.logoLabel(90); // null if no logo file yet
+        JLabel logo = AppTheme.logoLabel(60); // null if no logo file yet
         if (logo != null) {
             header.add(logo);
         }
