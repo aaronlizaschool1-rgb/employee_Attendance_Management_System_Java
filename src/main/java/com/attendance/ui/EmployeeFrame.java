@@ -2,8 +2,10 @@ package com.attendance.ui;
 
 import com.attendance.dao.DepartmentDAO;
 import com.attendance.dao.EmployeeDAO;
+import com.attendance.dao.UserDAO;
 import com.attendance.model.Department;
 import com.attendance.model.Employee;
+import com.attendance.model.User;
 import com.attendance.util.AppTheme;
 import com.attendance.util.SessionManager;
 
@@ -39,6 +41,7 @@ public class EmployeeFrame extends JFrame {
 
     private final EmployeeDAO employeeDAO = new EmployeeDAO();
     private final DepartmentDAO departmentDAO = new DepartmentDAO();
+    private final UserDAO userDAO = new UserDAO();
     private final Map<Integer, String> deptNames = new HashMap<>();
     private List<Employee> currentEmployees = new ArrayList<>();
 
@@ -278,15 +281,38 @@ public class EmployeeFrame extends JFrame {
         Employee emp = readAndValidateForm();
         if (emp == null) return;
 
+        // popup: ask for this employee's login username and password
+        AccountDialog dlg = new AccountDialog(this, emp, userDAO, SessionManager.isAdmin());
+        dlg.setVisible(true);
+        if (dlg.isCancelled()) return; // nothing is saved
+
+        // save the employee first (a duplicate email is the most likely failure)
         try {
-            if (employeeDAO.addEmployee(emp)) {
-                JOptionPane.showMessageDialog(this, "Employee added successfully.");
-                clearForm();
-                refreshTable();
-            }
+            if (!employeeDAO.addEmployee(emp)) return;
         } catch (SQLException ex) {
             handleSaveError(ex);
+            return;
         }
+
+        // then create the login account
+        String message = "Employee added successfully.";
+        User account = dlg.getAccount();
+        if (account != null) {
+            try {
+                if (userDAO.addUser(account)) {
+                    message += "\n\nLogin account created:\nUsername: " + account.getUsername()
+                            + "\nRole: " + account.getRole();
+                } else {
+                    message += "\n\nWARNING: the login account was not created.";
+                }
+            } catch (SQLException ex) {
+                message += "\n\nWARNING: the employee was saved but the login account could not be created:\n"
+                        + ex.getMessage();
+            }
+        }
+        JOptionPane.showMessageDialog(this, message);
+        clearForm();
+        refreshTable();
     }
 
     private void updateEmployee() {
@@ -419,5 +445,153 @@ public class EmployeeFrame extends JFrame {
                 "Database error:\n" + ex.getMessage(),
                 "Database Error", JOptionPane.ERROR_MESSAGE);
         ex.printStackTrace();
+    }
+
+    // ------------------------------------------------- account popup
+
+    /** Modal popup asking for the new employee's login username and password. */
+    private static class AccountDialog extends JDialog {
+
+        private static final Pattern USERNAME_PATTERN = Pattern.compile("^[a-z0-9._]{3,50}$");
+
+        private final UserDAO userDAO;
+        private final Employee emp;
+
+        private final JTextField usernameField = new JTextField(18);
+        private final JPasswordField passwordField = new JPasswordField(18);
+        private final JPasswordField confirmField = new JPasswordField(18);
+        private final JComboBox<String> roleCombo =
+                new JComboBox<>(new String[]{"EMPLOYEE", "MANAGER", "ADMINISTRATOR"});
+        private final JLabel errorLabel = new JLabel(" ");
+
+        private boolean cancelled = true; // closing the window counts as cancel
+        private User account = null;     // set when the account is created
+
+        AccountDialog(JFrame owner, Employee emp, UserDAO userDAO, boolean canPickRole) {
+            super(owner, "Create Login Account", true);
+            this.emp = emp;
+            this.userDAO = userDAO;
+
+            setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+            setResizable(false);
+
+            // suggest a username like the seed accounts: first initial + last name
+            String suggestion = (emp.getFirstName().substring(0, 1) + emp.getLastName())
+                    .toLowerCase().replaceAll("[^a-z0-9]", "");
+            usernameField.setText(suggestion);
+
+            roleCombo.setEnabled(canPickRole); // only administrators can choose another role
+
+            JPanel root = new JPanel(new BorderLayout(0, 10));
+            root.setBorder(BorderFactory.createEmptyBorder(16, 20, 14, 20));
+
+            JLabel heading = new JLabel("Login account for " + emp.getFirstName() + " " + emp.getLastName());
+            heading.setFont(heading.getFont().deriveFont(Font.BOLD, 15f));
+            JLabel note = new JLabel("Password at least 6 characters");
+            note.setForeground(Color.GRAY);
+            JPanel top = new JPanel(new GridLayout(2, 1, 0, 4));
+            top.add(heading);
+            top.add(note);
+            root.add(top, BorderLayout.NORTH);
+
+            JPanel form = new JPanel(new GridBagLayout());
+            addRow(form, 0, "Username:", usernameField);
+            addRow(form, 1, "Password:", passwordField);
+            addRow(form, 2, "Confirm Password:", confirmField);
+            addRow(form, 3, "Role:", roleCombo);
+            errorLabel.setForeground(new Color(190, 30, 30));
+            GridBagConstraints gc = new GridBagConstraints();
+            gc.gridx = 0;
+            gc.gridy = 4;
+            gc.gridwidth = 2;
+            gc.anchor = GridBagConstraints.WEST;
+            gc.insets = new Insets(6, 4, 0, 4);
+            form.add(errorLabel, gc);
+
+            JPanel center = new JPanel(new BorderLayout());
+            center.add(form, BorderLayout.NORTH);
+            root.add(center, BorderLayout.CENTER);
+
+            JButton createBtn = new JButton("CREATE ACCOUNT");
+            JButton cancelBtn = new JButton("CANCEL");
+            createBtn.addActionListener(e -> createAccount());
+            cancelBtn.addActionListener(e -> dispose());
+
+            JPanel buttons = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
+            buttons.add(createBtn);
+            buttons.add(cancelBtn);
+            root.add(buttons, BorderLayout.SOUTH);
+
+            setContentPane(root);
+            getRootPane().setDefaultButton(createBtn); // Enter = create
+            pack();
+            setLocationRelativeTo(owner);
+        }
+
+        private void addRow(JPanel p, int row, String label, JComponent comp) {
+            GridBagConstraints gc = new GridBagConstraints();
+            gc.insets = new Insets(5, 4, 5, 4);
+            gc.gridy = row;
+            gc.anchor = GridBagConstraints.WEST;
+            gc.gridx = 0;
+            p.add(new JLabel(label), gc);
+            gc.gridx = 1;
+            gc.fill = GridBagConstraints.HORIZONTAL;
+            gc.weightx = 1.0;
+            p.add(comp, gc);
+        }
+
+        private void createAccount() {
+            String username = usernameField.getText().trim().toLowerCase();
+            String password = new String(passwordField.getPassword());
+            String confirm = new String(confirmField.getPassword());
+
+            if (!USERNAME_PATTERN.matcher(username).matches()) {
+                showError("Username must be 3-50 characters: lowercase letters, numbers, . or _ only.");
+                usernameField.requestFocus();
+                return;
+            }
+            if (password.length() < 6 || password.length() > 50) {
+                showError("Password must be 6 to 50 characters.");
+                passwordField.requestFocus();
+                return;
+            }
+            if (!password.equals(confirm)) {
+                showError("The passwords do not match.");
+                confirmField.setText("");
+                confirmField.requestFocus();
+                return;
+            }
+
+            try {
+                if (userDAO.usernameExists(username)) {
+                    showError("That username is already taken. Please choose another.");
+                    usernameField.requestFocus();
+                    return;
+                }
+            } catch (SQLException ex) {
+                showError("Database error: " + ex.getMessage());
+                return;
+            }
+
+            String fullName = emp.getFirstName() + " " + emp.getLastName();
+            if (fullName.length() > 100) {
+                fullName = fullName.substring(0, 100);
+            }
+            String status = "ACTIVE".equals(emp.getStatus()) ? "ACTIVE" : "INACTIVE";
+
+            account = new User(username, password, fullName, (String) roleCombo.getSelectedItem(), status);
+            cancelled = false;
+            dispose();
+        }
+
+        private void showError(String message) {
+            errorLabel.setText("<html>" + message + "</html>");
+            pack();
+        }
+
+        boolean isCancelled() { return cancelled; }
+
+        User getAccount() { return account; }
     }
 }
