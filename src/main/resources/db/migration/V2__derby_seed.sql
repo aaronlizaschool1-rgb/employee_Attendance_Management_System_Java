@@ -2,30 +2,13 @@
 -- EMPLOYEE ATTENDANCE MANAGEMENT SYSTEM (EAMS)
 -- File Target    : src/main/resources/db/migration/V2__derby_seed.sql
 -- RDBMS Engine   : Apache Derby (Embedded / Network)
--- Description    : Revised seed script matching updated check constraints
---                  (role: ADMINISTRATOR, EMPLOYEE, MANAGER) with at least 10
---                  records per table for UI and query testing.
+-- Description    : Reordered seed dataset matching the new schema constraints
+--                  with >= 10 records per entity table.
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
--- 1. SEED DATA: USERS (10 Records)
--- Validated against: CHECK (role IN ('ADMINISTRATOR', 'EMPLOYEE', 'MANAGER'))
--- -----------------------------------------------------------------------------
-INSERT INTO users (username, password, full_name, role, status) VALUES
-('admin', 'admin123', 'System Administrator', 'ADMINISTRATOR', 'ACTIVE'),
-('aliza', 'pass123', 'Aaron Liza', 'ADMINISTRATOR', 'ACTIVE'),
-('mgarcia', 'pass123', 'Maria Garcia', 'MANAGER', 'ACTIVE'),
-('jdelacruz', 'pass123', 'Juan Dela Cruz', 'MANAGER', 'ACTIVE'),
-('cramirez', 'pass123', 'Chloe Ramirez', 'EMPLOYEE', 'ACTIVE'),
-('rreyes', 'pass123', 'Rafael Reyes', 'EMPLOYEE', 'ACTIVE'),
-('bsantos', 'pass123', 'Beatriz Santos', 'EMPLOYEE', 'ACTIVE'),
-('cfernando', 'pass123', 'Carlo Fernando', 'EMPLOYEE', 'ACTIVE'),
-('ltan', 'pass123', 'Leah Tan', 'EMPLOYEE', 'ACTIVE'),
-('jramos_inact', 'pass123', 'Jerome Ramos', 'EMPLOYEE', 'INACTIVE');
-
--- -----------------------------------------------------------------------------
--- 2. SEED DATA: DEPARTMENTS (10 Records)
--- Generates department_id values 1 to 10
+-- 1. SEED DATA: DEPARTMENTS (10 Records)
+-- Generated department_id: 1 to 10
 -- -----------------------------------------------------------------------------
 INSERT INTO departments (department_name) VALUES
 ('Human Resources'),
@@ -40,9 +23,9 @@ INSERT INTO departments (department_name) VALUES
 ('Executive Management');
 
 -- -----------------------------------------------------------------------------
--- 3. SEED DATA: EMPLOYEES (12 Records)
--- Foreign Keys: department_id (1-10)
--- Validated against: CHECK (status IN ('ACTIVE', 'INACTIVE', 'TERMINATED'))
+-- 2. SEED DATA: EMPLOYEES (12 Records)
+-- Generated employee_id: 1 to 12
+-- Linked to department_id 1 through 10
 -- -----------------------------------------------------------------------------
 INSERT INTO employees (first_name, last_name, email, department_id, job_title, shift_start, shift_end, status) VALUES
 ('Aaron', 'Liza', 'aaron.liza@attendance.com', 2, 'Lead Systems Architect', TIME('09:00:00'), TIME('18:00:00'), 'ACTIVE'),
@@ -59,9 +42,28 @@ INSERT INTO employees (first_name, last_name, email, department_id, job_title, s
 ('Jerome', 'Ramos', 'jerome.ramos@attendance.com', 4, 'Warehouse Coordinator', TIME('08:00:00'), TIME('17:00:00'), 'TERMINATED');
 
 -- -----------------------------------------------------------------------------
+-- 3. SEED DATA: USERS (11 Records)
+-- Generated user_id: 1 to 11
+-- user_id 1 is a standalone root system administrator (employee_id = NULL)
+-- user_id 2 to 11 link 1:1 to employees 1 through 10
+-- Notice: employee 12 ('TERMINATED') maps to inactive user 'jramos_inact'
+-- -----------------------------------------------------------------------------
+INSERT INTO users (employee_id, username, password, full_name, role, status) VALUES
+(NULL, 'admin', 'admin123', 'System Administrator', 'ADMINISTRATOR', 'ACTIVE'),
+(1, 'aliza', 'pass123', 'Aaron Liza', 'ADMINISTRATOR', 'ACTIVE'),
+(2, 'mgarcia', 'pass123', 'Maria Garcia', 'MANAGER', 'ACTIVE'),
+(3, 'jdelacruz', 'pass123', 'Juan Dela Cruz', 'MANAGER', 'ACTIVE'),
+(4, 'cramirez', 'pass123', 'Chloe Ramirez', 'EMPLOYEE', 'ACTIVE'),
+(5, 'rreyes', 'pass123', 'Rafael Reyes', 'EMPLOYEE', 'ACTIVE'),
+(6, 'bsantos', 'pass123', 'Beatriz Santos', 'EMPLOYEE', 'ACTIVE'),
+(7, 'cfernando', 'pass123', 'Carlo Fernando', 'EMPLOYEE', 'ACTIVE'),
+(8, 'ltan', 'pass123', 'Leah Tan', 'EMPLOYEE', 'ACTIVE'),
+(9, 'droxas', 'pass123', 'Dominic Roxas', 'EMPLOYEE', 'ACTIVE'),
+(12, 'jramos_inact', 'pass123', 'Jerome Ramos', 'EMPLOYEE', 'INACTIVE');
+
+-- -----------------------------------------------------------------------------
 -- 4. SEED DATA: ATTENDANCE_LOGS (12 Records)
--- Enforces: UNIQUE (employee_id, log_date)
--- Validated against: CHECK (status IN ('ON_TIME', 'LATE', 'HALF_DAY', 'UNDERTIME'))
+-- Enforces: uk_emp_log_date UNIQUE (employee_id, log_date)
 -- -----------------------------------------------------------------------------
 INSERT INTO attendance_logs (employee_id, log_date, time_in, time_out, status) VALUES
 (1, DATE('2026-10-01'), TIME('08:55:00'), TIME('18:05:00'), 'ON_TIME'),
@@ -80,8 +82,6 @@ INSERT INTO attendance_logs (employee_id, log_date, time_in, time_out, status) V
 -- -----------------------------------------------------------------------------
 -- 5. SEED DATA: LEAVE_RECORDS (10 Records)
 -- Foreign Keys: employee_id (1-10), reviewed_by references users(user_id) (1-4)
--- Validated against: CHECK (leave_type IN ('SICK', 'VACATION', 'EMERGENCY', 'UNPAID'))
--- Validated against: CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED'))
 -- -----------------------------------------------------------------------------
 INSERT INTO leave_records (employee_id, start_date, end_date, leave_type, status, reason, reviewed_by) VALUES
 (1, DATE('2026-10-15'), DATE('2026-10-17'), 'VACATION', 'APPROVED', 'Annual scheduled family vacation', 1),

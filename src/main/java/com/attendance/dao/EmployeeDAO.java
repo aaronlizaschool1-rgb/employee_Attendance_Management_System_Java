@@ -91,27 +91,46 @@ public class EmployeeDAO {
      //UPDATE: Updates an existing employee profile[cite: 22, 25].
      
     public boolean updateEmployee(Employee emp) throws SQLException {
-        String sql = "UPDATE employees SET first_name = ?, last_name = ?, email = ?, "
-                   + "department_id = ?, job_title = ?, shift_start = ?, shift_end = ?, status = ? "
-                   + "WHERE employee_id = ?";
+    String updateEmpSql = "UPDATE employees SET first_name = ?, last_name = ?, email = ?, "
+                        + "department_id = ?, job_title = ?, shift_start = ?, shift_end = ?, status = ? "
+                        + "WHERE employee_id = ?";
+    
+    String syncUserSql = "UPDATE users SET status = ? WHERE employee_id = ?";
 
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+    try (Connection conn = DatabaseConnection.getConnection()) {
+        conn.setAutoCommit(false); // Begin transaction
 
-            ps.setString(1, emp.getFirstName());
-            ps.setString(2, emp.getLastName());
-            ps.setString(3, emp.getEmail());
-            ps.setInt(4, emp.getDepartmentId());
-            ps.setString(5, emp.getJobTitle());
-            ps.setTime(6, Time.valueOf(emp.getShiftStart()));
-            ps.setTime(7, Time.valueOf(emp.getShiftEnd()));
-            ps.setString(8, emp.getStatus());
-            ps.setInt(9, emp.getEmployeeId());
+        try (PreparedStatement psEmp = conn.prepareStatement(updateEmpSql);
+             PreparedStatement psUser = conn.prepareStatement(syncUserSql)) {
 
-            return ps.executeUpdate() > 0;
+            // 1. Update Employee Record
+            psEmp.setString(1, emp.getFirstName());
+            psEmp.setString(2, emp.getLastName());
+            psEmp.setString(3, emp.getEmail());
+            psEmp.setInt(4, emp.getDepartmentId());
+            psEmp.setString(5, emp.getJobTitle());
+            psEmp.setTime(6, Time.valueOf(emp.getShiftStart()));
+            psEmp.setTime(7, Time.valueOf(emp.getShiftEnd()));
+            psEmp.setString(8, emp.getStatus());
+            psEmp.setInt(9, emp.getEmployeeId());
+            int empRows = psEmp.executeUpdate();
+
+            // 2. Synchronize User Account Status
+            String userStatus = "ACTIVE".equalsIgnoreCase(emp.getStatus()) ? "ACTIVE" : "INACTIVE";
+            psUser.setString(1, userStatus);
+            psUser.setInt(2, emp.getEmployeeId());
+            psUser.executeUpdate();
+
+            conn.commit(); // Commit transaction
+            return empRows > 0;
+        } catch (SQLException ex) {
+            conn.rollback();
+            throw ex;
+        } finally {
+            conn.setAutoCommit(true);
         }
     }
-
+}
     
       //DELETE: Removes an employee by ID[cite: 22, 25].
      
