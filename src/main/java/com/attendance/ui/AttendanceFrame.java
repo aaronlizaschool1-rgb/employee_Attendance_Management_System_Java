@@ -4,7 +4,9 @@ import com.attendance.dao.AttendanceDAO;
 import com.attendance.dao.EmployeeDAO;
 import com.attendance.model.AttendanceLog;
 import com.attendance.model.Employee;
+import com.attendance.model.User;
 import com.attendance.util.AppTheme;
+import com.attendance.util.SessionManager;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -42,14 +44,14 @@ import javax.swing.table.DefaultTableModel;
 /**
  * Daily Attendance Kiosk and History Viewer.
  * - Clock In / Clock Out by employee ID
+ * - Administrators and Managers can log attendance for any employee ID
+ * - Regular EMPLOYEES are locked exclusively to their own linked employee ID
  * - JTable of a day's attendance (loaded from AttendanceDAO.getDailyAttendanceReport)
  * - Date and status filters
- *
- * UI layer only: it calls existing DAO methods and does not modify them.
  */
 public class AttendanceFrame extends JFrame {
 
-    // Minutes after shift start that still count as ON_TIME. Change if your group agrees on a grace period.
+    // Minutes after shift start that still count as ON_TIME.
     private static final int GRACE_MINUTES = 0;
 
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm:ss");
@@ -60,8 +62,12 @@ public class AttendanceFrame extends JFrame {
 
     private final AttendanceDAO attendanceDAO = new AttendanceDAO();
     private final EmployeeDAO employeeDAO = new EmployeeDAO();
+    private final boolean canManageAll = SessionManager.isAdmin() || SessionManager.isManager();
 
     private JTextField employeeIdField;
+    private JButton clockInBtn;
+    private JButton clockOutBtn;
+    private JButton clearBtn;
     private JTextField dateField;
     private JComboBox<String> statusFilter;
     private JLabel clockLabel;
@@ -78,6 +84,7 @@ public class AttendanceFrame extends JFrame {
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
         buildUI();
+        applyRoleRestrictions();
         startClock();
         loadTable();
 
@@ -111,15 +118,17 @@ public class AttendanceFrame extends JFrame {
 
         // ---- Kiosk panel (clock in / out)
         employeeIdField = new JTextField(10);
-        JButton clockInBtn = new JButton("CLOCK IN");
-        JButton clockOutBtn = new JButton("CLOCK OUT");
-        JButton clearBtn = new JButton("CLEAR");
+        clockInBtn = new JButton("CLOCK IN");
+        clockOutBtn = new JButton("CLOCK OUT");
+        clearBtn = new JButton("CLEAR");
 
         clockInBtn.addActionListener(e -> clockIn());
         clockOutBtn.addActionListener(e -> clockOut());
         clearBtn.addActionListener(e -> {
-            employeeIdField.setText("");
-            employeeIdField.requestFocusInWindow();
+            if (canManageAll) {
+                employeeIdField.setText("");
+                employeeIdField.requestFocusInWindow();
+            }
         });
 
         JPanel kioskPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 8));
@@ -187,6 +196,32 @@ public class AttendanceFrame extends JFrame {
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.LEFT));
         footer.add(backBtn);
         root.add(footer, BorderLayout.SOUTH);
+    }
+
+    /**
+     * Applies permission locks: if standard employee, auto-fill and lock their ID.
+     */
+    private void applyRoleRestrictions() {
+        if (!canManageAll) {
+            User currentUser = SessionManager.getCurrentUser();
+            Integer loggedInEmpId = (currentUser != null) ? currentUser.getEmployeeId() : null;
+
+            if (loggedInEmpId != null && loggedInEmpId > 0) {
+                employeeIdField.setText(String.valueOf(loggedInEmpId));
+                employeeIdField.setEditable(false);
+                employeeIdField.setEnabled(false);
+                clearBtn.setEnabled(false);
+            } else {
+                employeeIdField.setEditable(false);
+                employeeIdField.setEnabled(false);
+                clockInBtn.setEnabled(false);
+                clockOutBtn.setEnabled(false);
+                clearBtn.setEnabled(false);
+                JOptionPane.showMessageDialog(this,
+                        "Your user account is not linked to an active Employee profile.\nPlease contact an Administrator.",
+                        "Account Unlinked", JOptionPane.WARNING_MESSAGE);
+            }
+        }
     }
 
     private void startClock() {
@@ -300,11 +335,13 @@ public class AttendanceFrame extends JFrame {
     }
 
     private void afterClockAction() {
-        employeeIdField.setText("");
+        if (canManageAll) {
+            employeeIdField.setText("");
+            employeeIdField.requestFocusInWindow();
+        }
         dateField.setText(LocalDate.now().toString());
         statusFilter.setSelectedItem("ALL");
         loadTable();
-        employeeIdField.requestFocusInWindow();
     }
 
     /** Loads the table for the date in dateField, applying the status filter. */
@@ -322,7 +359,6 @@ public class AttendanceFrame extends JFrame {
         try {
             List<Object[]> rows = attendanceDAO.getDailyAttendanceReport(dateText);
 
-            // Shift end times are used only to DISPLAY undertime. Nothing derived is saved.
             Map<Integer, Employee> employees = new HashMap<>();
             for (Employee e : employeeDAO.getAllEmployees()) {
                 employees.put(e.getEmployeeId(), e);
@@ -342,7 +378,7 @@ public class AttendanceFrame extends JFrame {
                             status = "UNDERTIME";
                         }
                     } catch (DateTimeParseException ignored) {
-                        // keep the stored status if a time can't be parsed
+                        // keep the stored status if time parsing fails
                     }
                 }
 
@@ -359,7 +395,7 @@ public class AttendanceFrame extends JFrame {
 
     // ------------------------------------------------------------- Helpers
 
-    /** Validates the ID field and returns the ACTIVE employee, or null after showing a message. */
+    /** Validates the ID field and returns the ACTIVE employee, enforcing ownership if regular employee. */
     private Employee validateEmployee() {
         String idText = employeeIdField.getText().trim();
 
@@ -376,8 +412,22 @@ public class AttendanceFrame extends JFrame {
             return null;
         }
 
+        int enteredId = Integer.parseInt(idText);
+
+        // Security check: Standard employees must only log their own ID
+        if (!canManageAll) {
+            User currentUser = SessionManager.getCurrentUser();
+            Integer loggedInEmpId = (currentUser != null) ? currentUser.getEmployeeId() : null;
+            if (loggedInEmpId == null || enteredId != loggedInEmpId) {
+                JOptionPane.showMessageDialog(this,
+                        "Unauthorized: You can only clock in or out for yourself.",
+                        "Access Denied", JOptionPane.ERROR_MESSAGE);
+                return null;
+            }
+        }
+
         try {
-            Employee emp = employeeDAO.getEmployeeById(Integer.parseInt(idText));
+            Employee emp = employeeDAO.getEmployeeById(enteredId);
             if (emp == null) {
                 JOptionPane.showMessageDialog(this, "No employee found with ID " + idText + ".",
                         "Employee Not Found", JOptionPane.WARNING_MESSAGE);
