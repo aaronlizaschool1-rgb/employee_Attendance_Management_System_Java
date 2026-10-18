@@ -286,18 +286,25 @@ public class EmployeeFrame extends JFrame {
         dlg.setVisible(true);
         if (dlg.isCancelled()) return; // nothing is saved
 
+        int generatedEmpId = -1;
+
         // save the employee first (a duplicate email is the most likely failure)
         try {
-            if (!employeeDAO.addEmployee(emp)) return;
+            // If addEmployee returns the generated ID (int)
+            generatedEmpId = employeeDAO.addEmployee(emp);
+            if (generatedEmpId <= 0) return;
+            emp.setEmployeeId(generatedEmpId);
         } catch (SQLException ex) {
             handleSaveError(ex);
             return;
         }
 
-        // then create the login account
-        String message = "Employee added successfully.";
+        // then create the login account with the real employee_id foreign key
+        String message = "Employee added successfully (ID: " + generatedEmpId + ").";
         User account = dlg.getAccount();
         if (account != null) {
+            // Assign the generated ID before inserting into users
+            account.setEmployeeId(generatedEmpId);
             try {
                 if (userDAO.addUser(account)) {
                     message += "\n\nLogin account created:\nUsername: " + account.getUsername()
@@ -541,49 +548,55 @@ public class EmployeeFrame extends JFrame {
             p.add(comp, gc);
         }
 
-        private void createAccount() {
-            String username = usernameField.getText().trim().toLowerCase();
-            String password = new String(passwordField.getPassword());
-            String confirm = new String(confirmField.getPassword());
+       private void createAccount() {
+    String username = usernameField.getText().trim().toLowerCase();
+    String password = new String(passwordField.getPassword());
+    String confirm = new String(confirmField.getPassword());
 
-            if (!USERNAME_PATTERN.matcher(username).matches()) {
-                showError("Username must be 3-50 characters: lowercase letters, numbers, . or _ only.");
-                usernameField.requestFocus();
-                return;
-            }
-            if (password.length() < 6 || password.length() > 50) {
-                showError("Password must be 6 to 50 characters.");
-                passwordField.requestFocus();
-                return;
-            }
-            if (!password.equals(confirm)) {
-                showError("The passwords do not match.");
-                confirmField.setText("");
-                confirmField.requestFocus();
-                return;
-            }
+    if (!USERNAME_PATTERN.matcher(username).matches()) {
+        showError("Username must be 3-50 characters: lowercase letters, numbers, . or _ only.");
+        usernameField.requestFocus();
+        return;
+    }
+    if (password.length() < 6 || password.length() > 50) {
+        showError("Password must be 6 to 50 characters.");
+        passwordField.requestFocus();
+        return;
+    }
+    if (!password.equals(confirm)) {
+        showError("The passwords do not match.");
+        confirmField.setText("");
+        confirmField.requestFocus();
+        return;
+    }
 
-            try {
-                if (userDAO.usernameExists(username)) {
-                    showError("That username is already taken. Please choose another.");
-                    usernameField.requestFocus();
-                    return;
-                }
-            } catch (SQLException ex) {
-                showError("Database error: " + ex.getMessage());
-                return;
-            }
-
-            String fullName = emp.getFirstName() + " " + emp.getLastName();
-            if (fullName.length() > 100) {
-                fullName = fullName.substring(0, 100);
-            }
-            String status = "ACTIVE".equals(emp.getStatus()) ? "ACTIVE" : "INACTIVE";
-
-            account = new User(username, password, fullName, (String) roleCombo.getSelectedItem(), status);
-            cancelled = false;
-            dispose();
+    try {
+        if (userDAO.usernameExists(username)) {
+            showError("That username is already taken. Please choose another.");
+            usernameField.requestFocus();
+            return;
         }
+        // Optional pre-check to prevent duplicate account assignment for the same employee
+        if (userDAO.getUserByEmployeeId(emp.getEmployeeId()) != null) {
+            showError("This employee already has a user account assigned.");
+            return;
+        }
+    } catch (SQLException ex) {
+        showError("Database error: " + ex.getMessage());
+        return;
+    }
+
+    String fullName = emp.getFirstName() + " " + emp.getLastName();
+    if (fullName.length() > 100) {
+        fullName = fullName.substring(0, 100);
+    }
+    String status = "ACTIVE".equals(emp.getStatus()) ? "ACTIVE" : "INACTIVE";
+
+    // Pass emp.getEmployeeId() so the User entity retains the foreign key binding:
+    account = new User(emp.getEmployeeId(), username, password, fullName, (String) roleCombo.getSelectedItem(), status);
+    cancelled = false;
+    dispose();
+}
 
         private void showError(String message) {
             errorLabel.setText("<html>" + message + "</html>");

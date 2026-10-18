@@ -25,26 +25,34 @@ public class EmployeeDAO {
    
      //CREATE: Inserts a new employee record into the database[cite: 22, 25].
     
-    public boolean addEmployee(Employee emp) throws SQLException {
-        String sql = "INSERT INTO employees (first_name, last_name, email, department_id, "
-                   + "job_title, shift_start, shift_end, status) "
-                   + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+    public int addEmployee(Employee emp) throws SQLException {
+    String sql = "INSERT INTO employees (first_name, last_name, email, department_id, "
+               + "job_title, shift_start, shift_end, status) "
+               + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+    try (Connection conn = DatabaseConnection.getConnection();
+         PreparedStatement ps = conn.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
 
-            ps.setString(1, emp.getFirstName());
-            ps.setString(2, emp.getLastName());
-            ps.setString(3, emp.getEmail());
-            ps.setInt(4, emp.getDepartmentId());
-            ps.setString(5, emp.getJobTitle());
-            ps.setTime(6, Time.valueOf(emp.getShiftStart()));
-            ps.setTime(7, Time.valueOf(emp.getShiftEnd()));
-            ps.setString(8, emp.getStatus());
+        ps.setString(1, emp.getFirstName());
+        ps.setString(2, emp.getLastName());
+        ps.setString(3, emp.getEmail());
+        ps.setInt(4, emp.getDepartmentId());
+        ps.setString(5, emp.getJobTitle());
+        ps.setTime(6, java.sql.Time.valueOf(emp.getShiftStart()));
+        ps.setTime(7, java.sql.Time.valueOf(emp.getShiftEnd()));
+        ps.setString(8, emp.getStatus());
 
-            return ps.executeUpdate() > 0;
+        int affected = ps.executeUpdate();
+        if (affected > 0) {
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                if (rs.next()) {
+                    return rs.getInt(1); // Return the newly generated employee_id!
+                }
+            }
         }
     }
+    return -1;
+}
 
    
      //READ: Retrieves all employee records ordered by employee ID[cite: 22, 25].

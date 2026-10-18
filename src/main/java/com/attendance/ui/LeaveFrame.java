@@ -189,17 +189,45 @@ public class LeaveFrame extends JFrame {
     private void loadEmployees() {
         try {
             employeeCombo.removeAllItems();
-            for (Employee e : employeeDAO.getAllEmployees()) {
-                if ("ACTIVE".equals(e.getStatus())) {
-                    employeeCombo.addItem(e);
+            User currentUser = SessionManager.getCurrentUser();
+            Integer loggedInEmpId = (currentUser != null) ? currentUser.getEmployeeId() : null;
+
+            List<Employee> allEmployees = employeeDAO.getAllEmployees();
+
+            if (canReview) {
+                // Administrators and Managers can file for anyone
+                for (Employee e : allEmployees) {
+                    if ("ACTIVE".equals(e.getStatus())) {
+                        employeeCombo.addItem(e);
+                    }
+                }
+                employeeCombo.setEnabled(true);
+            } else {
+                // Regular EMPLOYEES: Only allow them to see and select themselves
+                Employee self = null;
+                if (loggedInEmpId != null) {
+                    self = employeeDAO.getEmployeeById(loggedInEmpId);
+                }
+
+                if (self != null && "ACTIVE".equals(self.getStatus())) {
+                    employeeCombo.addItem(self);
+                    employeeCombo.setSelectedItem(self);
+                    employeeCombo.setEnabled(false); // Locked
+                } else {
+                    // Fallback: If account is not linked to an employee_id
+                    JOptionPane.showMessageDialog(this,
+                            "Your user account is not linked to an active Employee profile.\nPlease contact an Administrator.",
+                            "Account Unlinked", JOptionPane.WARNING_MESSAGE);
+                    fileBtn.setEnabled(false);
+                    return;
                 }
             }
+
             fileBtn.setEnabled(employeeCombo.getItemCount() > 0);
         } catch (SQLException ex) {
             showDbError(ex);
         }
     }
-
     private void refreshTable() {
         String filter = (String) statusFilter.getSelectedItem();
         try {
@@ -217,12 +245,14 @@ public class LeaveFrame extends JFrame {
     }
 
     private void clearForm() {
+    if (canReview) {
         if (employeeCombo.getItemCount() > 0) employeeCombo.setSelectedIndex(0);
-        typeCombo.setSelectedIndex(0);
-        startField.setText(LocalDate.now().toString());
-        endField.setText(LocalDate.now().toString());
-        reasonArea.setText("");
     }
+    typeCombo.setSelectedIndex(0);
+    startField.setText(LocalDate.now().toString());
+    endField.setText(LocalDate.now().toString());
+    reasonArea.setText("");
+}
 
     // ----------------------------------------------------------- actions
 
