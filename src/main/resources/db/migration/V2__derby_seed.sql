@@ -1,10 +1,3 @@
--- =============================================================================
--- EMPLOYEE ATTENDANCE MANAGEMENT SYSTEM (EAMS)
--- File Target    : src/main/resources/db/migration/V2__derby_seed.sql
--- RDBMS Engine   : Apache Derby (Embedded / Network)
--- Description    : Reordered seed dataset matching the new schema constraints
---                  with >= 10 records per entity table.
--- =============================================================================
 
 -- -----------------------------------------------------------------------------
 -- 1. SEED DATA: DEPARTMENTS (10 Records)
