@@ -1,14 +1,3 @@
--- =============================================================================
--- EMPLOYEE ATTENDANCE MANAGEMENT SYSTEM (EAMS)
--- File Target    : src/main/resources/db/migration/V1__derby_schema.sql
--- RDBMS Engine   : Apache Derby (Embedded / Network)
--- Description    : Safe teardown (DROP IF EXISTS) and complete 3NF schema 
---                  with Employee-User 1:1 cascade and status sync triggers.
--- =============================================================================
-
--- -----------------------------------------------------------------------------
--- TEARDOWN / CLEANUP (Reverse dependency order to avoid foreign key violations)
--- -----------------------------------------------------------------------------
 
 -- -----------------------------------------------------------------------------
 -- 1. DEPARTMENTS
